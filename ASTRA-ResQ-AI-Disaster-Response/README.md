@@ -53,8 +53,69 @@
 - **Regional Support**: MGM Hospital (`0870-2444444`) | Telangana SDRF (`1070 / 112`)
 
 ---
+## 🚀 Quick Start & Installation
 
-## ?? Quick Start & Installation
+### Prerequisites
+
+* **Python 3.8 or newer** (Python 3.10+ recommended)
+* **Git**
+* Any modern web browser such as Chrome, Edge, Firefox, or Safari
+* No external Python packages are required. The backend uses Python's standard library.
+
+### Clone the Repository
+
+Open **Git Bash**, Command Prompt, or another terminal and run:
+
+```bash
+git clone https://github.com/tanishqc2711-wq/CodHex.git
+```
+
+Then enter the project folder:
+
+```bash
+cd CodHex
+```
+
+### Start the Application
+
+Run:
+
+```bash
+python server.py
+```
+
+If `python` doesn't work on Windows, try:
+
+```bash
+py server.py
+```
+
+### Open the Application
+
+After the server starts, open your web browser and visit:
+
+**http://127.0.0.1:8000**
+
+The ASTRA-ResQ command center should now open in your browser.
+
+### Windows Quick Launch
+
+Windows users can also try the included:
+
+```text
+SmartDisasterPrevention.bat
+```
+
+Double-click the file to launch the application.
+
+### Stop the Server
+
+To stop the server, return to the terminal and press:
+
+```text
+Ctrl + C
+```
+
 
 ### Prerequisites
 - Python 3.8+ (No external third-party pip dependencies required; runs entirely on the Python Standard Library).
