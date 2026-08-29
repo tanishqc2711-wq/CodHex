@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTRA-ResQ | AI Disaster Response & Campus Resilience Command</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom Tactical Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- TOP TACTICAL HUD BAR -->
+    <header class="top-hud">
+        <div class="brand-section">
+            <div class="brand-logo-glow">???</div>
+            <div class="brand-title">
+                <h1>ASTRA-ResQ <span class="brand-tag">AI COMMAND</span></h1>
+                <p class="brand-sub">SR University Warangal & Regional Disaster Resilience System</p>
+            </div>
+        </div>
+
+        <!-- Live Telemetry Bar -->
+        <div class="hud-telemetry hidden md:flex">
+            <div class="telemetry-chip">
+                <span class="chip-label">Waddepally Lake Level</span>
+                <span id="telemetry-water-gauge" class="stat-value text-emerald-400 font-bold">8.4m (NORMAL)</span>
+            </div>
+            <div class="telemetry-chip">
+                <span class="chip-label">Precipitation</span>
+                <span id="telemetry-rain-rate" class="stat-value text-sky-400 font-bold">14 mm/hr</span>
+            </div>
+            <div class="telemetry-chip">
+                <span class="chip-label">Ambient Temp</span>
+                <span id="telemetry-temp" class="stat-value text-amber-400 font-bold">32.4?C</span>
+            </div>
+            <div class="telemetry-chip">
+                <span class="chip-label">Wind Velocity</span>
+                <span id="telemetry-wind-speed" class="stat-value text-slate-300 font-bold">18 km/h</span>
+            </div>
+            <div class="telemetry-chip">
+                <span class="chip-label">Threat Level</span>
+                <span id="telemetry-threat-level" class="threat-tag bg-emerald-600/30 text-emerald-400 border border-emerald-500/40">OPERATIONAL (NORMAL)</span>
+            </div>
+        </div>
+
+        <!-- Tactical Actions & Clock -->
+        <div class="hud-actions">
+            <!-- Language Selector -->
+            <select onchange="window.VoiceAssistant.setLanguage(this.value)" class="bg-slate-800 text-xs text-sky-400 font-semibold border border-slate-700 rounded-lg px-2 py-1.5 focus:outline-none">
+                <option value="en-IN">?? English</option>
+                <option value="te-IN">?? ?????? (Telugu)</option>
+                <option value="hi-IN">?? ????? (Hindi)</option>
+            </select>
+
+            <!-- Siren Toggle -->
+            <button onclick="const active = window.AudioSynth.toggleSiren(); this.classList.toggle('bg-red-600', active); this.classList.toggle('text-white', active);" class="btn-tactical btn-siren" title="Toggle Emergency Warning Siren">
+                <i data-lucide="volume-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Siren</span>
+            </button>
+
+            <!-- 1-Click SOS -->
+            <button onclick="triggerSOSBeacon()" class="btn-tactical btn-sos" title="1-Click Emergency SOS Broadcast">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>SOS BEACON</span>
+            </button>
+
+            <!-- Clock -->
+            <div id="tactical-clock" class="text-xs font-mono text-slate-400 hidden xl:block border-l border-slate-700/60 pl-3">
+                --:--:-- IST
+            </div>
+        </div>
+    </header>
+
+    <!-- APP CONTAINER -->
+    <div class="app-container">
+
+        <!-- LEFT TACTICAL NAVIGATION RAIL -->
+        <nav class="nav-rail">
+            <div>
+                <div class="nav-group-title">COMMAND VIEWS</div>
+                <button id="btn-tab-warroom" onclick="switchTab('warroom')" class="nav-tab-btn active-tab">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>War Room & Map</span>
+                </button>
+                <button id="btn-tab-citizen" onclick="switchTab('citizen')" class="nav-tab-btn">
+                    <i data-lucide="life-buoy" class="w-4 h-4"></i>
+                    <span>Citizen SOS & First-Aid</span>
+                </button>
+                <button id="btn-tab-drone" onclick="switchTab('drone')" class="nav-tab-btn">
+                    <i data-lucide="crosshair" class="w-4 h-4"></i>
+                    <span>Drone Recon & Thermal</span>
+                </button>
+                <button id="btn-tab-logistics" onclick="switchTab('logistics')" class="nav-tab-btn">
+                    <i data-lucide="boxes" class="w-4 h-4"></i>
+                    <span>Logistics & Shelters</span>
+                </button>
+                <button id="btn-tab-simulator" onclick="switchTab('simulator')" class="nav-tab-btn">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span>Disaster Drill Simulator</span>
+                </button>
+            </div>
+
+            <!-- Quick Campus Hotline Card -->
+            <div class="glass-panel p-3 text-xs flex flex-col gap-1.5 border border-sky-500/20">
+                <div class="flex items-center gap-1.5 text-sky-400 font-bold">
+                    <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+                    <span>SRU Disaster Desk</span>
+                </div>
+                <p class="text-slate-400">War Room: <b class="text-white">+91 870 281 8300</b></p>
+                <p class="text-slate-400">Health Center: <b class="text-white">+91 870 281 8399</b></p>
+                <p class="text-slate-400">Telangana SDRF: <b class="text-emerald-400">1070 / 112</b></p>
+            </div>
+        </nav>
+
+        <!-- MAIN WORKSPACE -->
+        <main class="main-workspace">
+
+            <!-- TAB 1: WAR ROOM & MAP VIEW -->
+            <div id="tab-content-warroom" class="tab-content">
+                
+                <!-- Center Interactive Map -->
+                <div class="map-canvas-container">
+                    
+                    <!-- Floating Geospatial Quick Switcher -->
+                    <div class="map-floating-controls">
+                        <button onclick="window.DisasterMap.flyTo('sru')" class="map-pill-btn" title="Zoom to SR University Campus Microgrid">
+                            <span>?? SR University Campus</span>
+                        </button>
+                        <button onclick="window.DisasterMap.flyTo('warangal')" class="map-pill-btn" title="View Warangal District Command">
+                            <span>??? Warangal District</span>
+                        </button>
+                        <button onclick="window.DisasterMap.flyTo('india')" class="map-pill-btn" title="View Pan-India Hazards">
+                            <span>???? Pan-India Hazard Map</span>
+                        </button>
+                    </div>
+
+                    <!-- Map DOM -->
+                    <div id="map"></div>
+                </div>
+
+                <!-- Right Intelligence Drawer -->
+                <aside class="intel-drawer">
+                    <div class="drawer-header">
+                        <h3><i data-lucide="activity" class="w-4 h-4 text-sky-400"></i> AI Incident Command</h3>
+                        <span class="text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded font-mono">LIVE FEED</span>
+                    </div>
+
+                    <div class="drawer-body">
+                        
+                        <!-- Dynamic Evacuation Route Panel (Shown when routed) -->
+                        <div id="evac-instruction-panel" class="evac-route-card hidden">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                                    <i data-lucide="shield-check" class="w-4 h-4"></i> ACTIVE EVACUATION ROUTE
+                                </span>
+                                <button onclick="document.getElementById('evac-instruction-panel').classList.add('hidden'); window.DisasterMap.clearEvacuationRoute();" class="text-xs text-slate-400 hover:text-white">? Clear</button>
+                            </div>
+                            <div class="mt-2 text-xs">
+                                <p><b>From:</b> <span id="evac-start-name">--</span></p>
+                                <p><b>To Safe Zone:</b> <span id="evac-dest-name" class="text-emerald-400 font-bold">--</span></p>
+                                <p><b>Distance:</b> <span id="evac-distance" class="text-sky-300 font-mono">--</span></p>
+                            </div>
+                            <ul id="evac-steps-list" class="evac-steps"></ul>
+                        </div>
+
+                        <!-- Incident Queue -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Priority Incident Queue</span>
+                                <span class="text-xs text-slate-500">Auto-Triaged by AI</span>
+                            </div>
+                            <div id="incident-list" class="flex flex-col gap-3">
+                                <!-- Populated dynamically by app.js -->
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Graph Card -->
+                        <div class="glass-panel p-3">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Inflow & Rainfall Radar Trend</span>
+                            <div style="height: 140px;">
+                                <canvas id="telemetryChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </aside>
+
+            </div>
+
+            <!-- TAB 2: CITIZEN SOS & FIRST AID -->
+            <div id="tab-content-citizen" class="tab-content hidden">
+                <div class="view-container">
+                    
+                    <div class="flex flex-col gap-2">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="life-buoy" class="w-6 h-6 text-red-400"></i>
+                            Citizen & Student Emergency Portal
+                        </h2>
+                        <p class="text-xs text-slate-400">Instant AI distress reporting, multilingual voice first-aid guidance, offline low-bandwidth SMS fallback, and damage photo scanning.</p>
+                    </div>
+
+                    <!-- 3 Core Action Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <!-- SOS Broadcast -->
+                        <div class="glass-panel p-5 flex flex-col justify-between border-red-500/30">
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center mb-3">
+                                    <i data-lucide="radio" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-bold text-lg text-white">Instant SOS Dispatch</h3>
+                                <p class="text-xs text-slate-400 mt-1">Transmits your exact GPS location, battery telemetry, and campus building code to the SRU War Room.</p>
+                            </div>
+                            <button onclick="triggerSOSBeacon()" class="btn-tactical btn-sos w-full justify-center mt-4 py-2.5">
+                                <i data-lucide="alert-triangle" class="w-4 h-4"></i> TRANSMIT SOS BEACON
+                            </button>
+                        </div>
+
+                        <!-- Voice First-Aid -->
+                        <div class="glass-panel p-5 flex flex-col justify-between border-sky-500/30">
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center mb-3">
+                                    <i data-lucide="mic" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-bold text-lg text-white">Voice AI First-Aid Guide</h3>
+                                <p class="text-xs text-slate-400 mt-1">Step-by-step interactive guidance in English, Telugu (??????), and Hindi (?????) for CPR, flood, burns, or electrical shock.</p>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button onclick="askVoiceGuidance('cpr')" class="btn-tactical bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs flex-1 justify-center">CPR Guide</button>
+                                <button onclick="askVoiceGuidance('flood')" class="btn-tactical bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs flex-1 justify-center">Flood Safety</button>
+                                <button onclick="askVoiceGuidance('fire')" class="btn-tactical bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs flex-1 justify-center">Fire Escape</button>
+                            </div>
+                        </div>
+
+                        <!-- AI Photo Damage Scanner -->
+                        <div class="glass-panel p-5 flex flex-col justify-between border-emerald-500/30">
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+                                    <i data-lucide="camera" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-bold text-lg text-white">AI Damage Photo Scanner</h3>
+                                <p class="text-xs text-slate-400 mt-1">Upload disaster photo to classify flood level, structural integrity cracks, smoke density, and trapped victims.</p>
+                            </div>
+                            <button onclick="runDamageScanner()" class="btn-tactical bg-emerald-600 hover:bg-emerald-500 text-white w-full justify-center mt-4 py-2.5">
+                                <i data-lucide="scan" class="w-4 h-4"></i> SCAN & ANALYZE DAMAGE
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- AI Damage Photo Scanner Result Drawer -->
+                    <div id="scan-result-card" class="glass-panel p-5 hidden border-emerald-500/40">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-1 rounded text-xs">AI VISION ASSESSMENT</span>
+                                <h3 id="scan-title" class="font-bold text-white text-base">--</h3>
+                            </div>
+                            <span id="scan-confidence" class="text-xs font-mono text-sky-400">Confidence: --</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-xs text-slate-400 block mb-1">Detected Hazard Signatures:</span>
+                                <div id="scan-detections-list" class="flex flex-col gap-2"></div>
+                            </div>
+                            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs text-slate-400 block">Recommended AI Action:</span>
+                                    <p id="scan-action" class="text-xs text-emerald-300 font-semibold mt-1">--</p>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="text-xs text-slate-400">Urgency Level:</span>
+                                    <p id="scan-urgency" class="text-sm font-bold text-red-400">--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- First Aid Interactive Steps Drawer -->
+                    <div id="first-aid-drawer" class="glass-panel p-5 hidden border-sky-500/40">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 id="first-aid-title" class="font-bold text-white text-base">--</h3>
+                            <button onclick="document.getElementById('first-aid-drawer').classList.add('hidden')" class="text-xs text-slate-400 hover:text-white">? Close</button>
+                        </div>
+                        <ul id="first-aid-steps" class="flex flex-col gap-2 text-xs text-slate-300"></ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TAB 3: DRONE RECON & THERMAL HUD -->
+            <div id="tab-content-drone" class="tab-content hidden">
+                <div class="view-container">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <i data-lucide="crosshair" class="w-6 h-6 text-sky-400"></i>
+                                Autonomous Drone Thermal Surveillance (SRU Campus)
+                            </h2>
+                            <p class="text-xs text-slate-400">Live optical and infrared thermal feed from Eagle-Eye Alpha drone orbiting over SR University.</p>
+                        </div>
+                        <div class="flex items-center gap-2 font-mono text-xs text-emerald-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-500/30">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>UPLINK: 5.8 GHz AES-256 (LIVE)</span>
+                        </div>
+                    </div>
+
+                    <!-- Drone Thermal Viewport -->
+                    <div class="thermal-hud-container">
+                        <div class="thermal-scanlines"></div>
+                        
+                        <!-- Crosshair & Bounding Box Simulations -->
+                        <div class="thermal-reticle">
+                            <div class="reticle-crosshair"></div>
+                            
+                            <!-- Bounding box 1 -->
+                            <div class="absolute" style="top: 25%; left: 38%; border: 2px solid #10b981; padding: 4px; border-radius: 4px;">
+                                <span class="text-[9px] font-mono bg-emerald-950 text-emerald-400 px-1 py-0.5 rounded">SURVIVOR [37.1?C]</span>
+                            </div>
+
+                            <!-- Bounding box 2 -->
+                            <div class="absolute" style="top: 55%; left: 62%; border: 2px solid #ef4444; padding: 4px; border-radius: 4px;">
+                                <span class="text-[9px] font-mono bg-red-950 text-red-400 px-1 py-0.5 rounded">WATER HAZARD [1.2m]</span>
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Readout -->
+                        <div class="thermal-telemetry-overlay">
+                            <div>UAV ID: <b>EAGLE-ALPHA-01</b></div>
+                            <div>LAT/LNG: <b>18.0690? N, 79.5440? E</b></div>
+                            <div>ALTITUDE: <b>85m AGL</b> | SPEED: <b>32 km/h</b></div>
+                            <div>OPTICAL ZOOM: <b>4.2x</b> | BATT: <b>94% (38 mins rem)</b></div>
+                        </div>
+                    </div>
+
+                    <!-- Drone Fleet Status Grid -->
+                    <div class="card-grid">
+                        <div class="glass-panel p-4">
+                            <span class="text-xs text-slate-400">Drone Alpha-1 (Thermal)</span>
+                            <h4 class="text-base font-bold text-white mt-1">Patrolling Admin & Sports Zone</h4>
+                            <p class="text-xs text-emerald-400 font-mono mt-2">Active Surveillance ? Signal 99%</p>
+                        </div>
+                        <div class="glass-panel p-4">
+                            <span class="text-xs text-slate-400">Drone Beta-2 (Payload Airdrop)</span>
+                            <h4 class="text-base font-bold text-white mt-1">Standby at Admin Helipad</h4>
+                            <p class="text-xs text-sky-400 font-mono mt-2">Ready with Medical Kits & Rations</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TAB 4: LOGISTICS & SHELTERS -->
+            <div id="tab-content-logistics" class="tab-content hidden">
+                <div class="view-container">
+                    <div class="flex flex-col gap-1">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="boxes" class="w-6 h-6 text-sky-400"></i>
+                            Disaster Logistics & Emergency Shelter Ledger
+                        </h2>
+                        <p class="text-xs text-slate-400">Real-time tracking of relief rations, water stocks, blood bank units, medical beds, and power generators across SR University & Warangal District.</p>
+                    </div>
+
+                    <div class="card-grid" id="campus-resources-grid">
+                        <!-- Populated dynamically by app.js -->
+                    </div>
+
+                    <!-- Warangal District Blood Bank Inventory -->
+                    <div class="glass-panel p-5 mt-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-base text-white">MGM Hospital Warangal Blood Bank Live Reserves</h3>
+                                <p class="text-xs text-slate-400">Real-time availability of critical blood groups for trauma triage.</p>
+                            </div>
+                            <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg font-mono">EMERGENCY STOCK</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3" id="blood-bank-grid">
+                            <!-- Populated dynamically by app.js -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: DISASTER SCENARIO SIMULATOR -->
+            <div id="tab-content-simulator" class="tab-content hidden">
+                <div class="view-container">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <i data-lucide="zap" class="w-6 h-6 text-amber-400"></i>
+                                Real-Life Disaster Scenario Simulator & Drills
+                            </h2>
+                            <p class="text-xs text-slate-400">Trigger live emergency drill scenarios to test dynamic AI path rerouting, sirens, and automatic resource dispatching.</p>
+                        </div>
+                        <button onclick="window.Simulator.resetSimulator()" class="btn-tactical bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Drill Baseline
+                        </button>
+                    </div>
+
+                    <!-- 4 Drill Scenarios -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        
+                        <!-- Scenario 1: Monsoon Flood -->
+                        <div class="glass-panel p-5 border-blue-500/40 flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded">SCENARIO 1</span>
+                                <h3 class="text-base font-bold text-white mt-2">??? Monsoon Flash Flood & Inundation</h3>
+                                <p class="text-xs text-slate-400 mt-1">Simulates heavy rainfall (82 mm/hr) in Hasanparthy catchment. Waddepally gauge spikes to 10.4m, water accumulates in South Drainage. AI blocks southern road and reroutes evacuation to Sports Complex Assembly Point Beta.</p>
+                            </div>
+                            <button onclick="window.Simulator.runScenario('flood')" class="btn-tactical bg-blue-600 hover:bg-blue-500 text-white justify-center mt-4 py-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> EXECUTE FLOOD DRILL
+                            </button>
+                        </div>
+
+                        <!-- Scenario 2: Chemical Fire -->
+                        <div class="glass-panel p-5 border-red-500/40 flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs bg-red-500/20 text-red-400 font-bold px-2 py-0.5 rounded">SCENARIO 2</span>
+                                <h3 class="text-base font-bold text-white mt-2">?? Lab Chemical Fire in Engineering Block</h3>
+                                <p class="text-xs text-slate-400 mt-1">Simulates solvent vapor ignition in Mech-Civil Labs (MCE-03). High temperature alarm, emergency siren triggers, corridor blocked, and voice AI guides students towards Central Cricket Ground (Safe Assembly Alpha).</p>
+                            </div>
+                            <button onclick="window.Simulator.runScenario('fire')" class="btn-tactical bg-red-600 hover:bg-red-500 text-white justify-center mt-4 py-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> EXECUTE FIRE DRILL
+                            </button>
+                        </div>
+
+                        <!-- Scenario 3: Cyclone Varuna -->
+                        <div class="glass-panel p-5 border-amber-500/40 flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded">SCENARIO 3</span>
+                                <h3 class="text-base font-bold text-white mt-2">?? Super Cyclone 'VARUNA' Landfall</h3>
+                                <p class="text-xs text-slate-400 mt-1">Simulates 105 km/h winds approaching Warangal. Grid power disconnects, automated diesel+solar microgrid takes over, and all campus hostels transition to Shelter-in-Place mode.</p>
+                            </div>
+                            <button onclick="window.Simulator.runScenario('cyclone')" class="btn-tactical bg-amber-600 hover:bg-amber-500 text-white justify-center mt-4 py-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> EXECUTE CYCLONE DRILL
+                            </button>
+                        </div>
+
+                        <!-- Scenario 4: 46?C Heatwave -->
+                        <div class="glass-panel p-5 border-orange-500/40 flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs bg-orange-500/20 text-orange-400 font-bold px-2 py-0.5 rounded">SCENARIO 4</span>
+                                <h3 class="text-base font-bold text-white mt-2">?? 46?C Severe Heatwave & Water Stress</h3>
+                                <p class="text-xs text-slate-400 mt-1">Simulates peak summer heat index exceeding 48?C. Deploys RO hydration points, alerts medical triage for heat stroke cases, and broadcasts hydration advisories.</p>
+                            </div>
+                            <button onclick="window.Simulator.runScenario('heatwave')" class="btn-tactical bg-orange-600 hover:bg-orange-500 text-white justify-center mt-4 py-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> EXECUTE HEATWAVE DRILL
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- SOS MODAL & OFFLINE SMS PACKET GENERATOR -->
+    <div id="sos-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                    <h3 class="text-lg font-bold text-white">EMERGENCY SOS TRANSMITTED</h3>
+                </div>
+                <button onclick="closeSOSModal()" class="text-slate-400 hover:text-white">?</button>
+            </div>
+            
+            <p class="text-xs text-slate-300 mb-3">Your distress beacon has been logged by the ASTRA-ResQ AI Dispatch Engine. Paramedic units and campus marshals have been dispatched.</p>
+
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 font-mono text-xs text-emerald-400 mb-4 break-all" id="offline-sms-output">
+                ASTRA-RESQ|SRU-CAMPUS|SOS-EMERGENCY|GPS:18.0688,79.5445|BAT:89%
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="sendOfflineSMS()" class="btn-tactical bg-sky-600 hover:bg-sky-500 text-white flex-1 justify-center py-2 text-xs">
+                    <i data-lucide="send" class="w-4 h-4"></i> Send Offline GSM / SMS Packet
+                </button>
+                <button onclick="closeSOSModal()" class="btn-tactical bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-4 text-xs">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/sru_data.js"></script>
+    <script src="js/audio_synth.js"></script>
+    <script src="js/voice_assistant.js"></script>
+    <script src="js/pathfinding.js"></script>
+    <script src="js/ai_triage.js"></script>
+    <script src="js/map_engine.js"></script>
+    <script src="js/simulator.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Render Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
